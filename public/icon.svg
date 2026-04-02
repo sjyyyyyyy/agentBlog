@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 背景 -->
+  <rect width="512" height="512" rx="96" fill="#1a1a2e"/>
+  
+  <!-- AI 机器人头部轮廓 -->
+  <ellipse cx="256" cy="280" rx="140" ry="130" fill="#60a5fa" opacity="0.15"/>
+  
+  <!-- 机器人头部主体 -->
+  <rect x="136" y="180" width="240" height="200" rx="48" fill="#60a5fa"/>
+  
+  <!-- 头顶天线 -->
+  <rect x="246" y="120" width="20" height="60" rx="10" fill="#60a5fa"/>
+  <circle cx="256" cy="110" r="20" fill="#a78bfa"/>
+  
+  <!-- 左眼 -->
+  <ellipse cx="196" cy="260" rx="32" ry="36" fill="#1a1a2e"/>
+  <ellipse cx="200" cy="254" rx="12" ry="14" fill="#ffffff"/>
+  
+  <!-- 右眼 -->
+  <ellipse cx="316" cy="260" rx="32" ry="36" fill="#1a1a2e"/>
+  <ellipse cx="320" cy="254" rx="12" ry="14" fill="#ffffff"/>
+  
+  <!-- 微笑嘴巴 -->
+  <path d="M 200 330 Q 256 370 312 330" stroke="#1a1a2e" stroke-width="12" stroke-linecap="round" fill="none"/>
+  
+  <!-- 左耳 -->
+  <rect x="100" y="230" width="36" height="60" rx="12" fill="#a78bfa"/>
+  
+  <!-- 右耳 -->
+  <rect x="376" y="230" width="36" height="60" rx="12" fill="#a78bfa"/>
+  
+  <!-- 装饰光晕 -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#60a5fa" stroke-width="2" opacity="0.3"/>
+</svg>
