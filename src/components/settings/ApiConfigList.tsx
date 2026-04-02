@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ApiConfig } from '@/app/settings/page';
 
 interface ModelInfo {
@@ -34,28 +34,30 @@ export default function ApiConfigList({
   const [selectedModel, setSelectedModel] = useState<{ configId: number; modelId: string } | null>(null);
   const [savingModel, setSavingModel] = useState(false);
 
-    const loadSelectedModel = async () => {
+  const loadSelectedModel = async () => {
     try {
       const res = await fetch('/api/preferences/chat-model');
-      const data = await res.json() as { success: boolean; data?: { configId: number; modelId: string } };
+      const data = await res.json() as { success: boolean; data?: { configId: number; modelId: string } | null };
       if (data.success && data.data) {
         setSelectedModel({
           configId: data.data.configId,
           modelId: data.data.modelId,
         });
+      } else {
+        setSelectedModel(null);
       }
     } catch (error) {
-      console.error('加载模型配置失败:', error);
+      console.error('Failed to load selected model:', error);
     }
   };
 
-    useState(() => {
+  useEffect(() => {
     loadSelectedModel();
-  });
+  }, [configs]);
 
   const handleTest = async (id: number) => {
     setTestingId(id);
-    setTestResult((prev) => ({ ...prev, [id]: { success: false, message: '测试中...' } }));
+    setTestResult((prev) => ({ ...prev, [id]: { success: false, message: 'Testing...' } }));
 
     try {
       const res = await fetch(`/api/config/${id}/test`, { method: 'POST' });
@@ -64,13 +66,15 @@ export default function ApiConfigList({
         ...prev,
         [id]: {
           success: data.success,
-          message: data.success ? `✅ ${data.message}（${data.latency}ms）` : `❌ ${data.error}`,
+          message: data.success
+            ? `Success: ${data.message ?? 'Connection OK'} (${data.latency ?? 0}ms)`
+            : `Failed: ${data.error ?? 'Unknown error'}`,
         },
       }));
     } catch {
       setTestResult((prev) => ({
         ...prev,
-        [id]: { success: false, message: '❌ 网络错误' },
+        [id]: { success: false, message: 'Failed: network error' },
       }));
     } finally {
       setTestingId(null);
@@ -92,16 +96,16 @@ export default function ApiConfigList({
       if (data.success) {
         setModels((prev) => ({ ...prev, [id]: data.data || [] }));
       } else {
-        alert(data.error);
+        alert(data.error || 'Failed to load models');
       }
     } catch (error) {
-      console.error('拉取模型失败:', error);
+      console.error('Failed to fetch models:', error);
     } finally {
       setLoadingModels(null);
     }
   };
 
-    const handleSelectModel = async (configId: number, modelId: string) => {
+  const handleSelectModel = async (configId: number, modelId: string) => {
     setSavingModel(true);
     try {
       const res = await fetch('/api/preferences/chat-model', {
@@ -112,12 +116,12 @@ export default function ApiConfigList({
       const data = await res.json() as { success: boolean; error?: string };
       if (data.success) {
         setSelectedModel({ configId, modelId });
-        alert(`✅ 已选择模型: ${modelId}`);
+        alert(`Selected model: ${modelId}`);
       } else {
-        alert(data.error);
+        alert(data.error || 'Failed to save model');
       }
     } catch (error) {
-      console.error('保存失败:', error);
+      console.error('Failed to save model:', error);
     } finally {
       setSavingModel(false);
     }
@@ -135,122 +139,136 @@ export default function ApiConfigList({
         onRefresh();
       }
     } catch (error) {
-      console.error('设置失败:', error);
+      console.error('Failed to set default config:', error);
     }
   };
 
   return (
     <div className="space-y-4">
-            {selectedModel && (
-        <div className="p-3 bg-green-900/30 border border-green-700 rounded-sm">
-          <div className="text-sm text-green-400">当前对话模型</div>
+      {selectedModel && (
+        <div className="rounded-sm border border-green-700 bg-green-900/30 p-3">
+          <div className="text-sm text-green-400">Current chat model</div>
           <div className="font-medium font-mono">{selectedModel.modelId}</div>
         </div>
       )}
 
       {configs.map((config) => (
-                <div
-          key={config.id}
-          className="poi-card p-0 overflow-hidden"
-        >
+        <div key={config.id} className="poi-card overflow-hidden p-0">
           <div className="p-4">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-lg font-orbitron text-primary">{config.name}</span>
+                  <span className="font-orbitron text-lg font-medium text-primary">{config.name}</span>
                   {config.is_default === 1 && (
-                    <span className="px-2 py-0.5 bg-green-600/50 border border-green-500 text-green-100 text-xs rounded-sm">默认</span>
+                    <span className="rounded-sm border border-green-500 bg-green-600/50 px-2 py-0.5 text-xs text-green-100">
+                      Default
+                    </span>
                   )}
                 </div>
-                <div className="text-sm text-gray-400 mt-1 font-mono">{config.base_url}</div>
-                <div className="text-sm text-gray-500 mt-1 font-mono">密钥: {config.api_key}</div>
+                <div className="mt-1 font-mono text-sm text-gray-400">{config.base_url}</div>
+                <div className="mt-1 font-mono text-sm text-gray-500">Key: {config.api_key}</div>
               </div>
 
               <div className="flex gap-2">
-                                <button
+                <button
                   onClick={() => handleTest(config.id)}
                   disabled={testingId === config.id}
-                  className="poi-btn text-xs py-1.5"
+                  className="poi-btn py-1.5 text-xs"
                 >
-                  {testingId === config.id ? '测试中...' : '测试'}
+                  {testingId === config.id ? 'Testing...' : 'Test'}
                 </button>
                 <button
                   onClick={() => handleFetchModels(config.id)}
                   disabled={loadingModels === config.id}
-                  className="poi-btn text-xs py-1.5"
+                  className="poi-btn py-1.5 text-xs"
                 >
-                  {loadingModels === config.id ? '加载中...' : expandedId === config.id ? '收起模型' : '查看模型'}
+                  {loadingModels === config.id
+                    ? 'Loading...'
+                    : expandedId === config.id
+                      ? 'Hide Models'
+                      : 'View Models'}
                 </button>
               </div>
             </div>
-                        {testResult[config.id] && (
+
+            {testResult[config.id] && (
               <div
-                className={`mt-3 p-2 rounded-sm text-sm border ${
-                  testResult[config.id].success 
-                    ? 'bg-green-900/30 text-green-300 border-green-500/30' 
-                    : 'bg-red-900/30 text-red-300 border-red-500/30'
+                className={`mt-3 rounded-sm border p-2 text-sm ${
+                  testResult[config.id].success
+                    ? 'border-green-500/30 bg-green-900/30 text-green-300'
+                    : 'border-red-500/30 bg-red-900/30 text-red-300'
                 }`}
               >
                 {testResult[config.id].message}
               </div>
             )}
 
-                        <div className="flex gap-4 mt-4 pt-3 border-t border-gray-700/50">
+            <div className="mt-4 flex gap-4 border-t border-gray-700/50 pt-3">
               {config.is_default !== 1 && (
                 <button
                   onClick={() => handleSetDefault(config.id)}
-                  className="text-sm text-secondary hover:text-secondary/80 transition-colors"
+                  className="text-sm text-secondary transition-colors hover:text-secondary/80"
                 >
-                  设为默认
+                  Set Default
                 </button>
               )}
               <button
                 onClick={() => onEdit(config)}
-                className="text-sm text-gray-400 hover:text-white transition-colors"
+                className="text-sm text-gray-400 transition-colors hover:text-white"
               >
-                编辑
+                Edit
               </button>
               <button
                 onClick={() => onDelete(config.id)}
-                className="text-sm text-destructive hover:text-red-400 transition-colors"
+                className="text-sm text-destructive transition-colors hover:text-red-400"
               >
-                删除
+                Delete
               </button>
             </div>
           </div>
 
           {expandedId === config.id && models[config.id] && (
             <div className="border-t border-gray-700/50 bg-black/40 p-4">
-              <div className="text-sm font-medium mb-3 text-primary">
-                可用模型（{models[config.id].length}个）- 点击选择
+              <div className="mb-3 text-sm font-medium text-primary">
+                Available models ({models[config.id].length})
               </div>
-              <div className="grid gap-2 max-h-64 overflow-y-auto pr-2">
+              <div className="grid max-h-64 gap-2 overflow-y-auto pr-2">
                 {models[config.id].map((model) => {
-                  const isSelected = selectedModel?.configId === config.id && selectedModel?.modelId === model.id;
+                  const isSelected =
+                    selectedModel?.configId === config.id && selectedModel?.modelId === model.id;
+
                   return (
                     <button
                       key={model.id}
                       onClick={() => handleSelectModel(config.id, model.id)}
                       disabled={savingModel}
-                      className={`flex items-center justify-between p-3 rounded-sm text-left transition-all border ${
+                      className={`flex items-center justify-between rounded-sm border p-3 text-left transition-all ${
                         isSelected
-                          ? 'bg-secondary/20 border-secondary text-secondary'
-                          : 'bg-black/20 border-gray-700 hover:border-gray-500 text-gray-300'
+                          ? 'border-secondary bg-secondary/20 text-secondary'
+                          : 'border-gray-700 bg-black/20 text-gray-300 hover:border-gray-500'
                       }`}
                     >
-                      <span className="text-sm font-mono">{model.id}</span>
+                      <span className="font-mono text-sm">{model.id}</span>
                       <div className="flex gap-1">
                         {isSelected && (
-                          <span className="px-1.5 py-0.5 bg-secondary/20 text-xs rounded-sm border border-secondary/50">当前</span>
+                          <span className="rounded-sm border border-secondary/50 bg-secondary/20 px-1.5 py-0.5 text-xs">
+                            Current
+                          </span>
                         )}
                         {model.capabilities.vision && (
-                          <span className="px-1.5 py-0.5 bg-purple-900/50 text-purple-300 text-xs rounded-sm border border-purple-500/30">👁 视觉</span>
+                          <span className="rounded-sm border border-purple-500/30 bg-purple-900/50 px-1.5 py-0.5 text-xs text-purple-300">
+                            Vision
+                          </span>
                         )}
                         {model.capabilities.streaming && (
-                          <span className="px-1.5 py-0.5 bg-blue-900/50 text-blue-300 text-xs rounded-sm border border-blue-500/30">⚡ 流式</span>
+                          <span className="rounded-sm border border-blue-500/30 bg-blue-900/50 px-1.5 py-0.5 text-xs text-blue-300">
+                            Streaming
+                          </span>
                         )}
                         {model.capabilities.functionCalling && (
-                          <span className="px-1.5 py-0.5 bg-orange-900/50 text-orange-300 text-xs rounded-sm border border-orange-500/30">🔧 函数</span>
+                          <span className="rounded-sm border border-orange-500/30 bg-orange-900/50 px-1.5 py-0.5 text-xs text-orange-300">
+                            Tools
+                          </span>
                         )}
                       </div>
                     </button>

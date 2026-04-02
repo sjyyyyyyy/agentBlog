@@ -7,10 +7,10 @@ interface D1Response {
 }
 
 /**
- * 执行 D1 数据库查询
- * @param sql - SQL 语句
- * @param params - 查询参数
- * @returns 查询结果数组
+ * 鎵ц D1 鏁版嵁搴撴煡璇?
+ * @param sql - SQL 璇彞
+ * @param params - 鏌ヨ鍙傛暟
+ * @returns 鏌ヨ缁撴灉鏁扮粍
  */
 export async function queryD1(sql: string, params: (string | number | boolean | null)[] = []) {
   const { accountId, databaseId, apiToken } = getCloudflareD1Config();
@@ -42,7 +42,9 @@ export async function queryD1(sql: string, params: (string | number | boolean | 
       clearTimeout(timeoutId);
 
       if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+        const errorText = (await res.text()).trim();
+        const detail = errorText ? ` - ${errorText}` : "";
+        throw new Error(`D1 HTTP ${res.status}${detail}`);
       }
 
       const data: D1Response = await res.json();
@@ -51,8 +53,8 @@ export async function queryD1(sql: string, params: (string | number | boolean | 
         throw new Error(data.errors?.[0]?.message || "D1 query failed");
       }
       
-      // 对于 INSERT/UPDATE/DELETE 操作，result 可能为空数组
-      // 安全地返回结果
+      // 瀵逛簬 INSERT/UPDATE/DELETE 鎿嶄綔锛宺esult 鍙兘涓虹┖鏁扮粍
+      // 瀹夊叏鍦拌繑鍥炵粨鏋?
       return data.result?.[0]?.results ?? [];
 
     } catch (error) {
